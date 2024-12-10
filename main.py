@@ -1,58 +1,67 @@
-import gym_cutting_stock
+import os
 import gymnasium as gym
-from policy import GreedyPolicy, RandomPolicy
-from student_submissions.s2210xxx.policy2210xxx import Policy2210xxx
+import gym_cutting_stock
+from dotenv import load_dotenv
+from student_submissions.s2212387.policy2212387 import Policy2212387
 
-# Create the environment
 env = gym.make(
     "gym_cutting_stock/CuttingStock-v0",
-    render_mode="human",  # Comment this line to disable rendering
+    render_mode="human",
 )
-NUM_EPISODES = 100
+
+load_dotenv()
+
+NUM_EPISODES = int(os.getenv('NUM_EPISODES', '100'))
 
 if __name__ == "__main__":
-    # Reset the environment
-    observation, info = env.reset(seed=42)
+    policy2211257 = Policy2212387()  # Khởi tạo chính sách
 
-    # Test GreedyPolicy
-    gd_policy = GreedyPolicy()
-    ep = 0
-    while ep < NUM_EPISODES:
-        action = gd_policy.get_action(observation, info)
-        observation, reward, terminated, truncated, info = env.step(action)
+    episode = 0
+    total_rewards = []
+    filled_ratios = []
 
-        if terminated or truncated:
-            print(info)
-            observation, info = env.reset(seed=ep)
-            ep += 1
+    try:
+        while episode < NUM_EPISODES:
+            # Đặt lại môi trường với seed ứng với số thứ tự episode hiện tại
+            observation, info = env.reset(seed=episode)
+            episode += 1
 
-    # Reset the environment
-    observation, info = env.reset(seed=42)
+            print(f"\n--- Starting Episode {episode} ---")
+            print(f"Initial products: {observation['products']}")
+            print(f"Initial info: {info}")
 
-    # Test RandomPolicy
-    rd_policy = RandomPolicy()
-    ep = 0
-    while ep < NUM_EPISODES:
-        action = rd_policy.get_action(observation, info)
-        observation, reward, terminated, truncated, info = env.step(action)
+            terminated = False  # Trạng thái kết thúc
+            truncated = False  # Trạng thái dừng do vượt thời gian
+            episode_reward = 0  # Tổng điểm thưởng cho episode này
 
-        if terminated or truncated:
-            print(info)
-            observation, info = env.reset(seed=ep)
-            ep += 1
+            while not (terminated or truncated):
+                # Lấy hành động từ chính sách
+                action = policy2211257.get_action(observation, info)
+                observation, reward, terminated, truncated, info = env.step(action)
+                episode_reward += reward
+                print(f"{info}")
 
-    # Uncomment the following code to test your policy
-    # # Reset the environment
-    # observation, info = env.reset(seed=42)
-    # print(info)
+            # Lưu filled_ratio nếu có
+            if "filled_ratio" in info:
+                filled_ratios.append(info["filled_ratio"])
+            else:
+                filled_ratios.append(None)
 
-    # policy2210xxx = Policy2210xxx(policy_id=1)
-    # for _ in range(200):
-    #     action = policy2210xxx.get_action(observation, info)
-    #     observation, reward, terminated, truncated, info = env.step(action)
-    #     print(info)
-
-    #     if terminated or truncated:
-    #         observation, info = env.reset()
-
-env.close()
+            # Lưu total_rewards của episode
+            total_rewards.append(episode_reward)
+    except KeyboardInterrupt:
+        print(f"\n--- Training interrupted ---")
+    finally:
+        print(f"\n--- Training Summary ---")
+        if not total_rewards and not filled_ratios:
+            print("No data to summarize; all episodes were interrupted.")
+        else:
+            print(f"Total rewards for each episode: {total_rewards}")
+            print(f"Filled ratios for each episode: {filled_ratios}")
+            # Tìm filled ratio cao nhất
+            max_filled_ratio = max([r for r in filled_ratios if r is not None], default=None)
+            if max_filled_ratio is not None:
+                print(f"Highest filled ratio: {max_filled_ratio:.2f}")
+            else:
+                print("No valid filled ratios.")
+        env.close()
