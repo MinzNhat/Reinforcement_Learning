@@ -23,7 +23,7 @@ if __name__ == "__main__":
     try:
         while episode < NUM_EPISODES:
             # Đặt lại môi trường với seed ứng với số thứ tự episode hiện tại
-            observation, info = env.reset(seed=episode)
+            observation, info = env.reset(seed=42)
             episode += 1
 
             print(f"\n--- Starting Episode {episode} ---")
